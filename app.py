@@ -28,7 +28,8 @@ def get_epwData(epw_file):
     for i, name in enumerate(cliNames):
         temp_df[name] = cliVars[i]
         
-    temp_df['DateTime'] = pd.date_range(start="2018-01-01 00:00", end="2018-12-31 23:00", freq="H")
+    # FIX: Use lowercase "h" for hourly frequency
+    temp_df['DateTime'] = pd.date_range(start="2018-01-01 00:00", end="2018-12-31 23:00", freq="h")
     temp_df.index = temp_df['DateTime']
     temp_df = temp_df.drop('DateTime', axis=1)
     temp_df['Day'] = temp_df.index.dayofyear
@@ -40,7 +41,9 @@ def get_epwData(epw_file):
     join_df.columns = [f'{col}_{i}' for col in cliNames for i in range(24)]
     
     final_df = join_df.copy().reset_index().iloc[:, 1:]
-    full_year_2025 = pd.date_range(start='2025-01-01', end='2025-12-31', freq='D')
+    
+    # FIX: Use lowercase "d" for daily frequency
+    full_year_2025 = pd.date_range(start='2025-01-01', end='2025-12-31', freq='d')
     final_df['Month'] = full_year_2025.month
     final_df['Day_of_Month'] = full_year_2025.day
     
