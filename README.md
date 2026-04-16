@@ -1,66 +1,72 @@
-ReCliDaR: Representative Climate Days Recognizer
-by University of New South Wales Sydney
+# 🌍 ReCliDaR: Representative Climate Days Recognizer
 
-ReCliDaR is a research tool designed to identify representative climate days from EnergyPlus Weather (.epw) files using multi-objective machine learning clustering. It evaluates climate patterns using k-Means, Gaussian Mixture Models (GMM), and Agglomerative Clustering (HAC) to provide high-fidelity representative data for building performance simulations.
+**Product of University of New South Wales Sydney**
 
-🚀 Access and Usage
-1. Web Interface (Fastest)
-The web application provides an instant, browser-based analysis tool for researchers who want to process individual files without any installation.
+ReCliDaR is a research tool designed to identify representative climate days from EnergyPlus Weather (.epw) files using unsupervised machine learning techniques. It enables building energy and urban microclimate modelers to reduce simulation time by leveraging weighted representative days, while still preserving the accuracy of performance assessments for urban built environments.
 
-Access: [https://unsw-reclidar.streamlit.app/]
+---
 
-Usage:
+## 🚀 Three Modes of Usage
 
-Upload your .epw file.
+### 🔹 1. Web Application (No Installation)
+The fastest way to process individual files instantly in your browser.
 
-Click Run ML Analysis.
+- 🌐 URL: https://unsw-reclidar.streamlit.app/
+- Best for: Instant individual file processing and cross-platform access
 
-Download the Representative Days Report and Monthly Distribution CSV files.
+---
 
-Best for: Quick analysis, non-programmers, and cross-platform (Mac/Linux/Windows) access.
+### 🔹 2. Windows Standalone Executable (Offline)
+A portable desktop application that works without internet or Python.
 
-2. Windows Executable (Offline)
-For users who prefer a local, standalone application that works without a Python environment or internet connection.
+- Access: Download ReCliDaR_tool.exe from the Releases section
+- Best for: Private, offline research
 
-Access: Go to the Releases section of this repository.
+---
 
-Download: ReCliDaR_tool.exe (approx. 126 MB).
+### 🔹 3. Python Research Engine (Batch Processing)
+A modular script (reclidar_engine.py) for large-scale processing.
 
-Usage: Double-click the file to launch the Graphical User Interface (GUI). No installation is required.
+- Best for: Automating analysis for 100+ files
 
-Best for: Offline research and users who prefer a traditional desktop experience.
+---
 
-3. Python Research Engine (Advanced/Batch)
-The reclidar_engine.py script is a clean, modular class designed for developers and researchers who need to process large-scale datasets (hundreds of EPW files) within their own Python pipelines.
+## 💻 Developer Quick Start
 
-Access: Download reclidar_engine.py from the main repository folder.
+### Install Dependencies
 
-Dependencies: Ensure you have installed the required libraries:
-pip install streamlit ladybug-core pandas numpy scikit-learn Pillow
+```bash
+pip install ladybug-core pandas numpy scikit-learn
+```
 
-Usage Example:
+### Example Usage
 
-Python
+```python
+import pandas as pd
 from reclidar_engine import ReCliDaR
 
-# Initialize and process
-orig, scaled = ReCliDaR.process_epw("sydney_climate.epw")
+epw_file = "USA_CA_San.Francisco.Intl.AP.724940_TMY3.epw"
 
-# Run specific algorithm (kMeans, GMM, or HAC)
-labels = ReCliDaR.run_analysis(scaled, method='kMeans')
+orig, scaled = ReCliDaR.process_epw(epw_file)
 
-# Get the two primary research outputs
-reps_df = ReCliDaR.get_representative_days(orig, scaled, labels, 'kMeans')
-dist_df = ReCliDaR.get_monthly_distribution(orig, labels, 'kMeans')
-Best for: Large-scale batch processing, integration into Grasshopper/Blender workflows, and customized academic research.
+method = 'kMeans'
+labels = ReCliDaR.run_analysis(scaled, method=method)
 
-📊 Outputs
-Regardless of the method used, the tool generates two primary datasets:
+reps_df = ReCliDaR.get_representative_days(orig, scaled, labels, method)
+dist_df = ReCliDaR.get_monthly_distribution(orig, labels, method)
 
-Representative Days: A summary of the typical days identified for each cluster, including their month, day, and the "weight" (number of days) they represent in the full year.
+reps_df.to_csv("representative_days.csv", index=False)
+dist_df.to_csv("monthly_distribution.csv", index=False)
 
-Monthly Distribution: A matrix showing the frequency of each cluster type across the 12 months of the year.
+print("Analysis complete.")
+```
 
-⚖️ License & Citation
-Distributed under the MIT License. If you use this tool in your research, please cite:
-Naga, Faculty of Architecture and Town Planning, UNSW Sydney.
+---
+
+## 📜 License
+
+MIT License
+
+Copyright (c) 2026 ReCliDaR
+
+Permission is hereby granted, free of charge, to any person obtaining a copy...
