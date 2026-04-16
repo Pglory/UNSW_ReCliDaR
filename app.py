@@ -13,7 +13,6 @@ from sklearn.decomposition import PCA
 # --- 1. RESEARCH ENGINE FUNCTIONS ---
 
 def get_epwData(epw_file):
-    # Streamlit passes a file buffer, so we save it temporarily to read with Ladybug
     with open("temp.epw", "wb") as f:
         f.write(epw_file.getbuffer())
     
@@ -28,7 +27,7 @@ def get_epwData(epw_file):
     for i, name in enumerate(cliNames):
         temp_df[name] = cliVars[i]
         
-    # FIX: Use lowercase "h" for hourly frequency
+    # Using lowercase 'h' for compatibility with newer Pandas versions
     temp_df['DateTime'] = pd.date_range(start="2018-01-01 00:00", end="2018-12-31 23:00", freq="h")
     temp_df.index = temp_df['DateTime']
     temp_df = temp_df.drop('DateTime', axis=1)
@@ -42,7 +41,7 @@ def get_epwData(epw_file):
     
     final_df = join_df.copy().reset_index().iloc[:, 1:]
     
-    # FIX: Use lowercase "d" for daily frequency
+    # Using lowercase 'd' for daily frequency
     full_year_2025 = pd.date_range(start='2025-01-01', end='2025-12-31', freq='d')
     final_df['Month'] = full_year_2025.month
     final_df['Day_of_Month'] = full_year_2025.day
@@ -89,9 +88,15 @@ def get_rep(df):
     D = pairwise_distances(df.to_numpy(), metric='euclidean')
     return np.argmin(D.mean(axis=1))
 
-# --- 2. STREAMLIT UI ---
+# --- 2. STREAMLIT UI & SESSION STATE ---
 
 st.set_page_config(page_title="UNSW ReCliDaR", page_icon="🌤️")
+
+# Initialize session state so results persist after download clicks
+if 'analysis_done' not in st.session_state:
+    st.session_state.analysis_done = False
+    st.session_state.rep_df = None
+    st.session_state.dist_df = None
 
 # Display Logo
 try:
@@ -104,6 +109,10 @@ st.title("ReCliDaR: Representative Climate Days Recognizer")
 st.markdown("Faculty of Architecture and Town Planning")
 
 uploaded_file = st.file_uploader("Choose an EPW file", type="epw")
+
+# Reset analysis state if a new file is uploaded
+if uploaded_file is None:
+    st.session_state.analysis_done = False
 
 if uploaded_file is not None:
     if st.button("Run ML Analysis"):
@@ -126,22 +135,47 @@ if uploaded_file is not None:
                 for name, labels in results.items():
                     current_df = epw_df.copy()
                     current_df['cluster'] = labels
-                    for j in range(len(set(labels))):
+                    unique_labels = np.unique(labels)
+                    for j in unique_labels:
                         subset_scaled = scaled_df[labels == j]
-                        idx = get_rep(subset_scaled)
-                        rep_row = epw_df.iloc[idx]
+                        idx_in_subset = get_rep(subset_scaled)
+                        actual_idx = subset_scaled.index[idx_in_subset]
+                        rep_row = epw_df.loc[actual_idx]
                         rep_days.append([f'{name}_{j}', int(rep_row["Month"]), int(rep_row["Day_of_Month"]), len(subset_scaled)])
                         check_df[f'{name}_{j}'] = [len(current_df[(current_df['cluster']==j) & (current_df['Month']==m)]) for m in range(1, 13)]
                 
+                # Store results in session state
+                st.session_state.rep_df = pd.DataFrame(rep_days, columns=['Category','Month','Day','Count'])
+                st.session_state.dist_df = check_df
+                st.session_state.analysis_done = True
+                
                 st.success("Analysis Complete!")
-                st.dataframe(pd.DataFrame(rep_days, columns=['Category','Month','Day','Total Days Counted']))
-                
-                # 4. Provide Downloads
-                csv_rep = pd.DataFrame(rep_days, columns=['Category','Month','Day','Count']).to_csv(index=False).encode('utf-8')
-                st.download_button("Download Report.csv", csv_rep, "report.csv", "text/csv")
-                
-                csv_dist = check_df.to_csv().encode('utf-8')
-                st.download_button("Download Monthly_Distribution.csv", csv_dist, "distribution.csv", "text/csv")
                 
             except Exception as e:
                 st.error(f"Analysis Error: {e}")
+
+# Display results and download buttons if analysis is complete
+if st.session_state.analysis_done:
+    st.subheader("Representative Days Summary")
+    st.dataframe(st.session_state.rep_df)
+    
+    st.subheader("Download Results")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        csv_rep = st.session_state.rep_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download Report.csv",
+            data=csv_rep,
+            file_name="report.csv",
+            mime="text/csv"
+        )
+        
+    with col2:
+        csv_dist = st.session_state.dist_df.to_csv().encode('utf-8')
+        st.download_button(
+            label="Download Distribution.csv",
+            data=csv_dist,
+            file_name="distribution.csv",
+            mime="text/csv"
+        )
