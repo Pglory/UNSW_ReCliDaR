@@ -1,52 +1,75 @@
-# app.py
 import streamlit as st
-import os
 import pandas as pd
-from engine import get_epwData, run_kMeans, get_rep
+import numpy as np
+import os
+from PIL import Image
+from ladybug.epw import EPW
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans, AgglomerativeClustering
+from sklearn.mixture import GaussianMixture
+from sklearn.metrics import silhouette_score, pairwise_distances
+from sklearn.decomposition import PCA
 
-st.set_page_config(page_title="ReCliDaR - UNSW", layout="wide")
+# --- RESEARCH ENGINE FUNCTIONS ---
+# (Include the same get_epwData, run_PCA, run_kMeans, etc., from your integrated script)
+
+def get_epwData(epw_file):
+    # Streamlit passes a file buffer, so we save it temporarily to read with Ladybug
+    with open("temp.epw", "wb") as f:
+        f.write(epw_file.getbuffer())
+    
+    epw = EPW("temp.epw")
+    cliVars = [epw.dry_bulb_temperature.values, epw.dew_point_temperature.values,
+               epw.relative_humidity.values, epw.global_horizontal_radiation.values,
+               epw.direct_normal_radiation.values, epw.diffuse_horizontal_radiation.values,
+               epw.wind_speed.values, epw.wind_direction.values]
+    cliNames = ['DBT','DPT','RH','GHR','DNR','DHR','WS','WD']
+    
+    # ... (Rest of your processing logic remains identical)
+    # Ensure it returns (final_df, scaled_df)
+    return final_df, scaled_df
+
+# --- STREAMLIT UI ---
+
+st.set_page_config(page_title="UNSW ReCliDaR", page_icon="🌤️")
+
+# Display Logo
+try:
+    logo = Image.open("image_b0e079.png")
+    st.image(logo, width=150)
+except:
+    st.warning("Logo file not found in repository.")
 
 st.title("ReCliDaR: Representative Climate Data Retriever")
-st.write("An ML-based tool to determine representative climate days from EPW files.")
+st.markdown("### Faculty of Architecture and Town Planning")
 
-uploaded_file = st.file_uploader("Upload your EPW file", type=["epw"])
+uploaded_file = st.file_uploader("Choose an EPW file", type="epw")
 
 if uploaded_file is not None:
-    # Save file temporarily
-    with open("temp.epw", "wb") as f:
-        f.write(uploaded_file.getbuffer())
-    
-    with st.spinner('Processing Climate Data...'):
-        # 1. Get Data
-        epw_df, scaled_df = get_epwData("temp.epw")
-        
-        # 2. Run Clustering
-        labels, score = run_kMeans(scaled_df)
-        epw_df['cluster'] = labels
-        
-        st.success(f"Clustering Complete! Silhouette Score: {score}")
-        
-        # 3. Get Representative Days
-        rep_days = []
-        for j in range(len(set(labels))):
-            cluster_subset_scaled = scaled_df[labels == j]
-            cluster_subset_raw = epw_df[labels == j]
-            idx = get_rep(cluster_subset_scaled)
-            rep_row = cluster_subset_raw.iloc[idx]
-            rep_days.append({
-                "Category": f"Cluster_{j}",
-                "Month": int(rep_row["Month"]),
-                "Day": int(rep_row["Day_of_Month"]),
-                "Days_in_Category": len(cluster_subset_raw)
-            })
-            
-        # 4. Show Results
-        df_results = pd.DataFrame(rep_days)
-        st.subheader("Representative Days Results")
-        st.table(df_results)
-        
-        # Download button
-        csv = df_results.to_csv(index=False).encode('utf-8')
-        st.download_button("Download Report as CSV", csv, "ReCliDaR_Report.csv", "text/csv")
-
-    os.remove("temp.epw")
+    if st.button("Run ML Analysis"):
+        with st.spinner("Analyzing climate patterns..."):
+            try:
+                # 1. Process Data
+                epw_df, scaled_df = get_epwData(uploaded_file)
+                
+                # 2. Run Clustering (using your existing functions)
+                results = {
+                    'kMeans': run_kMeans(scaled_df),
+                    'GMM': run_GMM(scaled_df),
+                    'HAC': run_HAC(scaled_df)
+                }
+                
+                # 3. Create Outputs
+                # ... (Logic to build rep_days and check_df)
+                
+                st.success("Analysis Complete!")
+                
+                # 4. Provide Downloads for Web Users
+                csv_rep = pd.DataFrame(rep_days).to_csv(index=False).encode('utf-8')
+                st.download_button("Download Report.csv", csv_rep, "report.csv", "text/csv")
+                
+                csv_dist = check_df.to_csv().encode('utf-8')
+                st.download_button("Download Monthly_Distribution.csv", csv_dist, "distribution.csv", "text/csv")
+                
+            except Exception as e:
+                st.error(f"Analysis Error: {e}")

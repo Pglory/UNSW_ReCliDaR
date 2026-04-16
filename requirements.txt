@@ -1,5 +1,6 @@
+streamlit
 ladybug-core
-scikit-learn
 pandas
 numpy
-streamlit
+scikit-learn
+Pillow
