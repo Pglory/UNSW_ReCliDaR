@@ -36,12 +36,12 @@ st.set_page_config(page_title="UNSW ReCliDaR", page_icon="🌤️")
 # Display Logo
 try:
     logo = Image.open("image_b0e079.png")
-    st.image(logo, width=150)
+    st.image(logo, width=50)
 except:
     st.warning("Logo file not found in repository.")
 
-st.title("ReCliDaR: Representative Climate Data Retriever")
-st.markdown("### Faculty of Architecture and Town Planning")
+st.title("ReCliDaR: Representative Climate Days Recognizer")
+#st.markdown("### Faculty of Architecture and Town Planning")
 
 uploaded_file = st.file_uploader("Choose an EPW file", type="epw")
 
